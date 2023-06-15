@@ -1,0 +1,316 @@
+[
+    {
+        "id": "d58af14f3adf14f6",
+        "type": "tab",
+        "label": "UNIR",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "0a7de630cda13e99",
+        "type": "influxdb out",
+        "z": "d58af14f3adf14f6",
+        "influxdb": "aeee32a449c2fa50",
+        "name": "",
+        "measurement": "LUMINARIA",
+        "precision": "",
+        "retentionPolicy": "",
+        "database": "database",
+        "precisionV18FluxV20": "s",
+        "retentionPolicyV18Flux": "",
+        "org": "dabb471436930e4e",
+        "bucket": "UNIR",
+        "x": 1110,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "55e18898422684b3",
+        "type": "mqtt in",
+        "z": "d58af14f3adf14f6",
+        "name": "",
+        "topic": "painlessMesh/from/#",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "cf7066a317e8abe6",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 280,
+        "wires": [
+            [
+                "1d826c3cc9643657",
+                "03eafc34b4e2a9d9"
+            ]
+        ]
+    },
+    {
+        "id": "2af136375db232f9",
+        "type": "function",
+        "z": "d58af14f3adf14f6",
+        "name": "helper",
+        "func": "const isFloat = function (num) {\n    return ((num.toString().split('.').length) <= 2 &&\n        num.toString().match(/^[\\+\\-]?\\d*\\.?\\d+(?:[Ee][\\+\\-]?\\d+)?$/)) ?\n        (!isNaN(Number.parseFloat(num))) : false;\n}\n\nconst isInt = function (num) {\n    return ((num.toString().split('.').length) == 1 &&\n        num.toString().match(/^[\\-]?\\d+$/)) ?\n        (!isNaN(Number.parseInt(num))) : false;\n}\n\nconst print_payload = function (payload) {\n    let obj1 = payload[0]\n    let obj2 = payload[1]\n    console.log(\"id: \" + obj2.id)\n    console.log(\"timestamp: \" + obj1.timestamp)\n    console.log(\"temperature: \" + obj1.temperature)\n    console.log(\"voltage: \" + obj1.voltage)\n    console.log(\"current: \" + obj1.current)\n    console.log(\"pf: \" + obj1.pf)\n    console.log(\"rain: \" + obj1.rain)\n}\n\nconst parseDate = function (date_str) {\n    let date = date_str.split(' ')[0]\n    let day = date.split('-')[0]\n    let month = date.split('-')[1]\n    let year = date.split('-')[2]\n\n    let time = date_str.split(' ')[1]\n    let hour = time.split(':')[0]\n    let min = time.split(':')[1]\n    let sec = time.split(':')[2]\n\n    return new Date(year, month, day, hour, min, sec);\n}\n\nconst payload_validation = function (payload) {\n    const MIN_TEMP = 0\n    const MAX_TEMP = 40\n\n    let is_temperature_valid = isFloat(payload.temperature)\n        && payload.temperature <= MAX_TEMP && payload.temperature >= MIN_TEMP;\n\n    const MIN_VOLTAGE = 0;\n    const MAX_VOLTAGE = 250\n\n    let is_voltage_valid = isFloat(payload.voltage) && payload.voltage <= MAX_VOLTAGE\n        && payload.voltage > MIN_VOLTAGE;\n\n    const MIN_RAIN = 0\n    const MAX_RAIN = 4095\n\n    let is_rainvalue_valid = isInt(payload.rain) && payload.rain >= MIN_RAIN\n        && payload.rain <= MAX_RAIN\n\n    const MIN_AMP = 0;\n    const MAX_AMP = 3;\n\n    let is_current_valid = isFloat(payload.current) && payload.current >= MIN_AMP\n        && payload.current <= MAX_AMP;\n\n    return is_rainvalue_valid && is_temperature_valid && is_voltage_valid && is_current_valid;\n}\n\nconst input_payload = msg.payload;\nconst id = msg.topic.split(\"/\")[2];\nconst data = input_payload.split(\"/\")[3].split(\",\")\nlet output_payload = [{\n    \"timestamp\": parseDate(data[0]),\n    \"temperature\": parseFloat(data[1]),\n    \"voltage\": parseFloat(data[2]),\n    \"current\": parseFloat(data[3]),\n    \"pf\": parseFloat(data[4]),\n    \"rain\": parseInt(data[5]),\n}, { \"id\": id}]\n\nconst success = payload_validation(output_payload[0])\nif (success) {\n    print_payload(output_payload)\n    return {\n        payload: output_payload\n\n    }\n} else {\n    console.log(\"not validated\")\n}",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 710,
+        "y": 240,
+        "wires": [
+            [
+                "0a7de630cda13e99"
+            ]
+        ]
+    },
+    {
+        "id": "ed188f7963da0f4b",
+        "type": "inject",
+        "z": "d58af14f3adf14f6",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "painlessMesh/from/53456",
+        "payload": "/mea/wea/18.562,126.60,0.00,0.00,0.000,4095",
+        "payloadType": "str",
+        "x": 110,
+        "y": 60,
+        "wires": [
+            [
+                "2af136375db232f9"
+            ]
+        ]
+    },
+    {
+        "id": "bd4c464439273003",
+        "type": "debug",
+        "z": "d58af14f3adf14f6",
+        "name": "debug 3",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 960,
+        "y": 740,
+        "wires": []
+    },
+    {
+        "id": "8e8d70dddb0dc8c8",
+        "type": "comment",
+        "z": "d58af14f3adf14f6",
+        "name": "",
+        "info": "mosquitto_pub -h 420cf56f94ee4084ba5ed3e62c26e923.s2.eu.hivemq.cloud   -u admin -P TFMunir1275 -p 8883 -t  painlessMesh/from/dispo2 -m \"/mea/wea/13-06-2023 11:00:00,18.25,127.50,0.03,0.250,4095\"\n\n\n\n\n\nmosquitto_pub -h 420cf56f94ee4084ba5ed3e62c26e923.s2.eu.hivemq.cloud   -u admin -P TFMunir1275 -p 8883 -t  painlessMesh/from/dispo2 -m \"/log/radar/13-06-2023 10:52:35,enabled\"",
+        "x": 320,
+        "y": 760,
+        "wires": []
+    },
+    {
+        "id": "1d826c3cc9643657",
+        "type": "switch",
+        "z": "d58af14f3adf14f6",
+        "name": "",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "cont",
+                "v": "mea/wea",
+                "vt": "str"
+            },
+            {
+                "t": "cont",
+                "v": "log",
+                "vt": "str"
+            },
+            {
+                "t": "cont",
+                "v": "mea/energy",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 3,
+        "x": 450,
+        "y": 280,
+        "wires": [
+            [
+                "2af136375db232f9"
+            ],
+            [
+                "8d7b173a6052e1a9"
+            ],
+            [
+                "39db52d10410d72a"
+            ]
+        ]
+    },
+    {
+        "id": "2cbe98da9be4149c",
+        "type": "influxdb out",
+        "z": "d58af14f3adf14f6",
+        "influxdb": "aeee32a449c2fa50",
+        "name": "",
+        "measurement": "LUMINARIA_LOG",
+        "precision": "",
+        "retentionPolicy": "",
+        "database": "database",
+        "precisionV18FluxV20": "s",
+        "retentionPolicyV18Flux": "",
+        "org": "dabb471436930e4e",
+        "bucket": "UNIR",
+        "x": 1090,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "8d7b173a6052e1a9",
+        "type": "function",
+        "z": "d58af14f3adf14f6",
+        "name": "Logs",
+        "func": "\nconst input_payload = msg.payload;\nconst id = msg.topic.split(\"/\")[2];\nconst data = input_payload.split(\"/\")[3].split(\",\")\nlet output_payload = [{\n    \"sensor\": input_payload.split(\"/\")[2],\n    \"state\": data[1],\n    \n    }, { \n        \"id\": id\n    }\n]\n\n\n    return {\n        payload: output_payload\n\n    }\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 710,
+        "y": 400,
+        "wires": [
+            [
+                "2cbe98da9be4149c"
+            ]
+        ]
+    },
+    {
+        "id": "03eafc34b4e2a9d9",
+        "type": "debug",
+        "z": "d58af14f3adf14f6",
+        "name": "debug 17",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 400,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "184ba0fafec81897",
+        "type": "function",
+        "z": "d58af14f3adf14f6",
+        "name": "Logs",
+        "func": "\nconst input_payload = msg.payload;\nconst id = msg.topic.split(\"/\")[2];\nconst data = input_payload.split(\"/\")[3].split(\",\")\nlet output_payload = [{\n    \"sensor\": input_payload.split(\"/\")[2],\n    \"state\": data[1],\n    \n    }, { \n        \"id\": id\n    }\n]\n\n\n    return {\n        payload: output_payload\n\n    }\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 710,
+        "y": 400,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "39db52d10410d72a",
+        "type": "function",
+        "z": "d58af14f3adf14f6",
+        "name": "energy",
+        "func": "\nconst parseDate = function (date_str) {\n    let date = date_str.split(' ')[0]\n    let day = date.split('-')[0]\n    let month = date.split('-')[1]\n    let year = date.split('-')[2]\n\n    let time = date_str.split(' ')[1]\n    let hour = time.split(':')[0]\n    let min = time.split(':')[1]\n    let sec = time.split(':')[2]\n\n    return new Date(year, month, day, hour, min, sec);\n}\n\n\n\nconst input_payload = msg.payload;\nconst id = msg.topic.split(\"/\")[2];\nconst data = input_payload.split(\"/\")[3].split(\",\")\nlet output_payload = [{\n    \"timestamp\": parseDate(data[0]),\n    \"energy\": parseFloat(data[1]),\n    \n}, { \"id\": id}]\n\n\n        payload: output_payload\n\n",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 730,
+        "y": 580,
+        "wires": [
+            [
+                "bd4c464439273003",
+                "805bedb3229942bc"
+            ]
+        ]
+    },
+    {
+        "id": "805bedb3229942bc",
+        "type": "influxdb out",
+        "z": "d58af14f3adf14f6",
+        "influxdb": "aeee32a449c2fa50",
+        "name": "",
+        "measurement": "LUMINARIA_ENERGY",
+        "precision": "",
+        "retentionPolicy": "",
+        "database": "database",
+        "precisionV18FluxV20": "s",
+        "retentionPolicyV18Flux": "",
+        "org": "dabb471436930e4e",
+        "bucket": "UNIR",
+        "x": 1090,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "aeee32a449c2fa50",
+        "type": "influxdb",
+        "hostname": "127.0.0.1",
+        "port": "8086",
+        "protocol": "http",
+        "database": "database",
+        "name": "",
+        "usetls": false,
+        "tls": "",
+        "influxdbVersion": "2.0",
+        "url": "https://us-east-1-1.aws.cloud2.influxdata.com",
+        "rejectUnauthorized": false
+    },
+    {
+        "id": "cf7066a317e8abe6",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "420cf56f94ee4084ba5ed3e62c26e923.s2.eu.hivemq.cloud",
+        "port": "8883",
+        "tls": "",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": true,
+        "protocolVersion": "5",
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    }
+]
